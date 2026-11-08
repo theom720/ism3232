@@ -1,14 +1,22 @@
 # tests/test_my_assistant.py
 # Author: Theo Major
 
+from mock_model import MockModel
 from my_assistant import PizzaAssistant
 from my_tool import PizzaOrderLookup
 
 
+class SilentModel:
+    """A model that never has an answer."""
+
+    def reply(self, instructions, history):
+        return None
+
+
 def make_assistant():
-    """Build a fresh pizza assistant with its own tool for each test."""
+    """Build a fresh pizza assistant with its own tool and model for each test."""
     orders = {"P100": "in the oven", "P101": "out for delivery"}
-    return PizzaAssistant("Pepe", "Be friendly.", PizzaOrderLookup(orders))
+    return PizzaAssistant("Pepe", "Be friendly.", PizzaOrderLookup(orders), MockModel())
 
 
 def test_tool_finds_known_status():
@@ -45,3 +53,11 @@ def test_respond_records_both_messages():
     assistant = make_assistant()
     assistant.respond("hello")
     assert len(assistant.history) == 2
+
+
+def test_model_failure_gets_a_safe_reply():
+    orders = {"P100": "in the oven", "P101": "out for delivery"}
+    assistant = PizzaAssistant(
+        "Pepe", "Be friendly.", PizzaOrderLookup(orders), SilentModel()
+    )
+    assert "try again" in assistant.respond("hello")
